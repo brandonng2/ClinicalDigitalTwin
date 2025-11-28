@@ -1,0 +1,7 @@
+{
+    "ecg_data": "data/ecg_record_data.csv",
+    "hosp_diagnosis": "data/diagnoses_icd_data.csv",
+    "hosp_admissions": "data/admissions_data.csv",
+    "hosp_patient": "data/patient_data.csv",
+    "output_dir": "data/processed/clinical_data.csv"
+}

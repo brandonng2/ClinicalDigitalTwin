@@ -1,3 +1,31 @@
 # ClinicalDigitalTwin
 
-Our focus for this quarter has been on building domain knowledge through literature review, identifying and evaluating datasets to utilize, and defining our research questions and objectives. As a result, our Github repository is still in development, with little code developed for our capstone beyond conducting data cleaning and basic EDA on our dataset.
+A clean, modular pipeline for preprocessing MIMIC-IV ECG and hospital data.
+
+## Project Structure
+
+```
+.
+├── configs/
+│   └── preprocessing_config.json   # Configuration settings
+├── data/
+│   ├── raw/                        # Raw data files
+│   └── processed/                  # Processed output files
+├── notebooks/                      # Jupyter notebooks for exploration
+├── preprocessing.py                # Core preprocessing module
+├── run.py                          # Main execution script
+├── requirements.txt                # Python dependencies
+└── README.md                       # This file
+```
+
+## Setup
+
+### 1. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+## License
+
+This project is for research purposes using MIMIC-IV data. Please ensure compliance with MIMIC-IV data use agreements.
