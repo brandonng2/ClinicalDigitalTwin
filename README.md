@@ -1,11 +1,17 @@
 # ClinicalDigitalTwin
 
-A clean, modular pipeline for preprocessing MIMIC-IV hospital, ICU, ED, and ECG data.  
+A clean, modular pipeline for preprocessing MIMIC-IV data (Hospital, ICU, ED, and ECG) for clinical digital twin modeling.  
 **Note:** Temporal preprocessing is still in progress.
 
 ## Project Overview
 
-This repository provides an end-to-end framework for preparing MIMIC-IV datasets for clinical digital twin modeling. It supports both static (column-based) and temporal (row-based) preprocessing of patient data, enabling streamlined integration for downstream analyses and predictive modeling.
+This repository provides an end-to-end framework for preparing integrated MIMIC-IV datasets for clinical digital twin modeling. It combines data from:
+
+- **MIMIC-IV:** Core hospital and ICU data including admissions, diagnoses, procedures, and patient demographics
+- **MIMIC-IV-ED:** Emergency department visits and diagnoses
+- **MIMIC-IV-ECG:** Electrocardiogram recordings and measurements
+
+The pipeline supports both static (column-based) and temporal (row-based) preprocessing, enabling streamlined integration for downstream analyses and predictive modeling. **This project specifically focuses on the cohort of patients who have ECG records.**
 
 ## Project Structure
 ```
@@ -29,20 +35,147 @@ This repository provides an end-to-end framework for preparing MIMIC-IV datasets
 ## Prerequisites
 
 - **Python:** 3.8 or higher
-- **MIMIC-IV Access:** Credentialed access through PhysioNet (see below)
+- **PhysioNet Access:** Credentialed access to all MIMIC-IV datasets
 - **Required Training:** CITI "Data or Specimens Only Research" certification
+- **Google BigQuery:** Optional but recommended for efficient data extraction
 
-This project requires the MIMIC-IV dataset, which is a **restricted-access resource**.
+## Data Access
+
+This project requires access to **multiple MIMIC-IV datasets**, all of which are restricted-access resources:
+
+1. **MIMIC-IV v3.1** (Core hospital data): https://physionet.org/content/mimiciv/3.1/
+2. **MIMIC-IV-ECG v1.0** (ECG recordings): https://physionet.org/content/mimic-iv-ecg/1.0/
+3. **MIMIC-IV-ED v2.2** (Emergency department data): https://physionet.org/content/mimic-iv-ed/2.2/
 
 ### Steps to Obtain Access:
 
 1. Complete the CITI "Data or Specimens Only Research" course: https://about.citiprogram.org/
 2. Create a PhysioNet account: https://physionet.org/register/
-3. Request access to MIMIC-IV v3.1: https://physionet.org/content/mimiciv/
-4. Sign the PhysioNet Credentialed Health Data Use Agreement
-5. Once approved, download the dataset and place CSV files in `data/raw/`
+3. Request access to each dataset above (separate applications required)
+4. Sign the PhysioNet Credentialed Health Data Use Agreement for each
+5. Once approved, proceed to Data Extraction below
 
-**Note:** Approval typically takes a few business days after submitting your request.
+**Note:** Approval typically takes a few business days. You must be approved for all three datasets to use this pipeline.
+
+## Data Extraction
+
+### Method 1: Google BigQuery (Recommended)
+
+This project focuses on **patients who have ECG records** in MIMIC-IV. Use these SQL queries in Google BigQuery to extract the relevant subset:
+
+#### 1. Hospital Diagnoses (ICD Codes)
+```sql
+-- Save as: diagnoses_icd.csv
+SELECT
+   di.*,
+   did.long_title
+FROM `physionet-data.mimiciv_3_1_hosp.diagnoses_icd` AS di
+JOIN `physionet-data.mimiciv_3_1_hosp.d_icd_diagnoses` AS did
+   ON di.icd_code = did.icd_code AND di.icd_version = did.icd_version
+WHERE di.subject_id IN (
+   SELECT DISTINCT subject_id
+   FROM `physionet-data.mimiciv_ecg.machine_measurements`
+)
+```
+
+#### 2. Hospital Procedures (ICD Codes)
+```sql
+-- Save as: procedures_icd.csv
+SELECT
+   pi.*,
+   dip.long_title
+FROM `physionet-data.mimiciv_3_1_hosp.procedures_icd` AS pi
+JOIN `physionet-data.mimiciv_3_1_hosp.d_icd_procedures` as dip
+   ON pi.icd_code = dip.icd_code AND pi.icd_version = dip.icd_version
+WHERE pi.subject_id IN (
+   SELECT DISTINCT subject_id
+   FROM `physionet-data.mimiciv_ecg.machine_measurements`
+)
+```
+
+#### 3. Hospital Admissions
+```sql
+-- Save as: admissions.csv
+SELECT *
+FROM `physionet-data.mimiciv_3_1_hosp.admissions` AS a
+WHERE a.subject_id IN (
+   SELECT DISTINCT subject_id
+   FROM `physionet-data.mimiciv_ecg.machine_measurements`
+)
+```
+
+#### 4. Patient Demographics
+```sql
+-- Save as: patients.csv
+SELECT *
+FROM `physionet-data.mimiciv_3_1_hosp.patients` AS p
+WHERE p.subject_id IN (
+   SELECT DISTINCT subject_id
+   FROM `physionet-data.mimiciv_ecg.machine_measurements`
+)
+```
+
+#### 5. ECG Records
+```sql
+-- Save as: ecg_records.csv
+SELECT *
+FROM `physionet-data.mimiciv_ecg.record_list` AS rl
+WHERE rl.subject_id IN (
+   SELECT DISTINCT subject_id
+   FROM `physionet-data.mimiciv_ecg.machine_measurements`
+)
+```
+
+#### 6. ICU Stays
+```sql
+-- Save as: icustays.csv
+SELECT *
+FROM `physionet-data.mimiciv_3_1_icu.icustays` AS icu
+WHERE icu.subject_id IN (
+   SELECT DISTINCT subject_id
+   FROM `physionet-data.mimiciv_ecg.machine_measurements`
+)
+```
+
+#### 7. Emergency Department Diagnoses
+```sql
+-- Save as: ed_diagnosis.csv
+SELECT *
+FROM `physionet-data.mimiciv_ed.diagnosis` AS edd
+WHERE edd.subject_id IN (
+   SELECT DISTINCT subject_id
+   FROM `physionet-data.mimiciv_ecg.machine_measurements`
+)
+```
+
+#### 8. Emergency Department Stays
+```sql
+-- Save as: ed_stays.csv
+SELECT *
+FROM `physionet-data.mimiciv_ed.edstays` AS eds
+WHERE eds.subject_id IN (
+   SELECT DISTINCT subject_id
+   FROM `physionet-data.mimiciv_ecg.machine_measurements`
+)
+```
+
+### Data Placement
+
+After running these queries:
+1. Export each result as CSV from BigQuery
+2. Place all CSV files in the `data/raw/` directory
+3. Ensure filenames match those specified in the SQL comments
+
+**Cohort Size:** All queries filter for patients with ECG records, resulting in a subset of the full MIMIC-IV population.
+
+### Method 2: Direct Download
+
+Alternatively, download complete datasets and filter locally:
+1. Download each dataset from PhysioNet (links above)
+2. Extract relevant CSV files to `data/raw/`
+3. The preprocessing pipeline will automatically filter for ECG patients
+
+**Note:** BigQuery is more efficient for large-scale filtering.
 
 ## Installation
 
@@ -59,7 +192,17 @@ pip install -r requirements.txt
 
 ### 3. Verify Data Placement
 
-Ensure MIMIC-IV CSV files are in the `data/raw/` directory before running preprocessing.
+Ensure all required CSV files are in `data/raw/static` before running preprocessing:
+- `diagnoses_icd.csv`
+- `drgcodes.csv`
+- `procedures_icd.csv`
+- `admissions.csv`
+- `patients.csv`
+- `icustays.csv`
+- `ecg_records.csv`
+- `ed_diagnosis.csv`
+- `ed_stays.csv`
+- `record_list.csv`
 
 ## Usage
 
@@ -68,25 +211,72 @@ Ensure MIMIC-IV CSV files are in the `data/raw/` directory before running prepro
 python run.py
 ```
 
-This executes both static and temporal preprocessing according to the configuration files in `configs/`:
+This executes both static and temporal preprocessing according to configuration files in `configs/`:
 
-- **Static preprocessing:** Processes demographic, comorbidity, and baseline features
-- **Temporal preprocessing:** Processes time-series events such as ICU stays, vitals, labs, medications, and procedures (**Note:** Still in progress)
+- **Static preprocessing:** Demographic, comorbidity, and baseline features from admissions and patient data
+- **Temporal preprocessing:** Time-series events including ICU vitals, ED visits, procedures, and ECG measurements (**In Progress**)
 
+### Exploratory Analysis
 
-### 3. Notebooks
+Use the notebooks in `notebooks/` to explore data distributions and quality and test preprocessing functions before running the full pipeline.
 
-Use the notebooks in `notebooks/` to test and explore preprocessing functions before running the full pipeline.
+## Citations
+
+When using this project, please cite all relevant MIMIC-IV datasets:
+
+### MIMIC-IV (Core Hospital Data)
+```
+Johnson, A., Bulgarelli, L., Pollard, T., Gow, B., Moody, B., Horng, S., 
+Celi, L. A., & Mark, R. (2024). MIMIC-IV (version 3.1). PhysioNet. 
+https://doi.org/10.13026/kpb9-mt58
+```
+
+### MIMIC-IV-ECG
+```
+Gow, B., Pollard, T., Nathanson, L. A., Johnson, A., Moody, B., Fernandes, C., 
+Greenbaum, N., Waks, J. W., Eslami, P., Carbonati, T., Berkowitz, S., Moukheiber, D., 
+Chiu, E., Rosman, J., Ghassemi, M. M., Horng, S., Celi, L. A., & Mark, R. (2023). 
+MIMIC-IV-ECG: Diagnostic Electrocardiogram Matched Subset (version 1.0). PhysioNet. 
+https://doi.org/10.13026/6mm1-ek67
+```
+
+### MIMIC-IV-ED
+```
+Gaichies, E., Jang, J., Aczon, M., Leu, M., Garcia, J., Rodricks, J., Girkar, U., 
+Murray, H., Brenner, L., Hamilton, P., Alpern, E., Moody, B., Pollard, T., 
+Johnson, A. E. W., Celi, L. A., Mark, R. G., & Badawi, O. (2024). MIMIC-IV-ED 
+(version 2.2). PhysioNet. https://doi.org/10.13026/77mm-fy28
+```
+
+### Original MIMIC-IV Publication
+```
+Johnson, A.E.W., Bulgarelli, L., Shen, L. et al. MIMIC-IV, a freely accessible 
+electronic health record dataset. Sci Data 10, 1 (2023). 
+https://doi.org/10.1038/s41597-022-01899-x
+```
+
+### PhysioNet
+```
+Goldberger, A., Amaral, L., Glass, L., et al. (2000). PhysioBank, PhysioToolkit, 
+and PhysioNet: Components of a new research resource for complex physiologic signals. 
+Circulation, 101(23), e215–e220.
+```
 
 ## License
 
-This project is intended for **research use only** with MIMIC-IV data. By using this repository, you agree to comply with:
+This project uses data from multiple MIMIC-IV datasets, all licensed under the **PhysioNet Credentialed Health Data License v1.5.0**.
 
-- The MIMIC-IV Data Use Agreement: [PhysioNet Credentialing](https://physionet.org/content/mimiciv/view-dua/3.1/)
-- Any institutional or IRB requirements for working with de-identified patient data.
+By using this repository, you agree to:
 
-**Full License:** [PhysioNet Data License](https://physionet.org/content/mimiciv/view-license/3.1/)
-Redistribution and commercial use are prohibited.
+- Comply with all PhysioNet data use agreements
+- Follow institutional or IRB requirements for de-identified patient data
+- Use data for **research and educational purposes only** (no commercial use)
+- Not attempt to identify individuals or institutions in the data
+- Not share access to the data with unauthorized parties
+- Maintain appropriate data security measures
+
+**All Data Use Agreement:** [PhysioNet Credentialed Health Data Use Agreement](https://physionet.org/content/mimiciv/view-dua/3.1/)
+**Full License:** [PhysioNet Credentialed Health Data License](https://physionet.org/content/mimiciv/view-license/3.1/)
 
 ## Acknowledgments
 
