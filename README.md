@@ -21,15 +21,21 @@ The pipeline supports both static (column-based) and temporal (row-based) prepro
 │   └── temporal_preprocessing.json    # Configuration for temporal/row-based CSV preprocessing
 ├── data/
 │   ├── raw/                           # Raw input data files (e.g., MIMIC-IV CSVs)
+│   │   ├── static/                    # Raw static CSVs
+│   │   └── temporal/                  # Raw temporal CSVs
 │   └── processed/                     # Output of preprocessing scripts
+│       ├── static/                    # Processed static CSVs
+│       └── temporal/                  # Processed temporal CSVs
 ├── notebooks/                         # Jupyter notebooks for testing and exploration
+│   └── misc/                          # Miscellaneous notebooks
 ├── src/
 │   └── preprocessing/
 │       ├── static_preprocessing.py    # Functions to preprocess static/column-based data
 │       └── temporal_preprocessing.py  # Functions to preprocess temporal/row-based data
 ├── run.py                             # Main script to execute the preprocessing pipeline
 ├── requirements.txt                   # Python dependencies
-└── README.md                          # This file
+└── README.md
+
 ```
 
 ## Prerequisites
@@ -78,22 +84,7 @@ WHERE di.subject_id IN (
 )
 ```
 
-#### 2. Hospital Procedures (ICD Codes)
-```sql
--- Save as: procedures_icd.csv
-SELECT
-   pi.*,
-   dip.long_title
-FROM `physionet-data.mimiciv_3_1_hosp.procedures_icd` AS pi
-JOIN `physionet-data.mimiciv_3_1_hosp.d_icd_procedures` as dip
-   ON pi.icd_code = dip.icd_code AND pi.icd_version = dip.icd_version
-WHERE pi.subject_id IN (
-   SELECT DISTINCT subject_id
-   FROM `physionet-data.mimiciv_ecg.machine_measurements`
-)
-```
-
-#### 3. Hospital Admissions
+#### 2. Hospital Admissions
 ```sql
 -- Save as: admissions.csv
 SELECT *
@@ -104,7 +95,7 @@ WHERE a.subject_id IN (
 )
 ```
 
-#### 4. Patient Demographics
+#### 3. Patient Demographics
 ```sql
 -- Save as: patients.csv
 SELECT *
@@ -115,9 +106,9 @@ WHERE p.subject_id IN (
 )
 ```
 
-#### 5. ECG Records
+#### 4. ECG Record List
 ```sql
--- Save as: ecg_records.csv
+-- Save as: ecg_record_list.csv
 SELECT *
 FROM `physionet-data.mimiciv_ecg.record_list` AS rl
 WHERE rl.subject_id IN (
@@ -126,7 +117,7 @@ WHERE rl.subject_id IN (
 )
 ```
 
-#### 6. ICU Stays
+#### 5. ICU Stays
 ```sql
 -- Save as: icustays.csv
 SELECT *
@@ -137,7 +128,7 @@ WHERE icu.subject_id IN (
 )
 ```
 
-#### 7. Emergency Department Diagnoses
+#### 6. Emergency Department Diagnoses
 ```sql
 -- Save as: ed_diagnosis.csv
 SELECT *
@@ -148,14 +139,25 @@ WHERE edd.subject_id IN (
 )
 ```
 
-#### 8. Emergency Department Stays
+#### 7. Emergency Department Stays
 ```sql
--- Save as: ed_stays.csv
+-- Save as: edstays.csv
 SELECT *
 FROM `physionet-data.mimiciv_ed.edstays` AS eds
 WHERE eds.subject_id IN (
    SELECT DISTINCT subject_id
    FROM `physionet-data.mimiciv_ecg.machine_measurements`
+)
+```
+
+#### 8. Hospital Drgcode
+```sql
+-- Save as: edstays.csv
+SELECT *
+FROM `physionet-data.mimiciv_3_1_hosp.drgcodes` AS dc
+WHERE dc.subject_id IN (
+  SELECT DISTINCT subject_id
+  FROM `physionet-data.mimiciv_ecg.machine_measurements`
 )
 ```
 
@@ -193,16 +195,14 @@ pip install -r requirements.txt
 ### 3. Verify Data Placement
 
 Ensure all required CSV files are in `data/raw/static` before running preprocessing:
+- `admissions.csv`
 - `diagnoses_icd.csv`
 - `drgcodes.csv`
-- `procedures_icd.csv`
-- `admissions.csv`
-- `patients.csv`
-- `icustays.csv`
-- `ecg_records.csv`
+- `ecg_record_list.csv`
 - `ed_diagnosis.csv`
-- `ed_stays.csv`
-- `record_list.csv`
+- `edstays.csv`
+- `icustays.csv`
+- `patients.csv`
 
 ## Usage
 
@@ -276,6 +276,7 @@ By using this repository, you agree to:
 - Maintain appropriate data security measures
 
 **All Data Use Agreement:** [PhysioNet Credentialed Health Data Use Agreement](https://physionet.org/content/mimiciv/view-dua/3.1/)
+
 **Full License:** [PhysioNet Credentialed Health Data License](https://physionet.org/content/mimiciv/view-license/3.1/)
 
 ## Acknowledgments
