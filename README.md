@@ -3,6 +3,10 @@
 A clean, modular pipeline for preprocessing MIMIC-IV hospital, ICU, ED, and ECG data.  
 **Note:** Temporal preprocessing is still in progress.
 
+## Project Overview
+
+This repository provides an end-to-end framework for preparing MIMIC-IV datasets for clinical digital twin modeling. It supports both static (column-based) and temporal (row-based) preprocessing of patient data, enabling streamlined integration for downstream analyses and predictive modeling.
+
 ## Project Structure
 ```
 .
@@ -22,25 +26,53 @@ A clean, modular pipeline for preprocessing MIMIC-IV hospital, ICU, ED, and ECG 
 └── README.md                          # This file
 ```
 
-## Setup
+## Prerequisites
 
-### 1. Install Dependencies
+- **Python:** 3.8 or higher
+- **MIMIC-IV Access:** Credentialed access through PhysioNet (see below)
+- **Required Training:** CITI "Data or Specimens Only Research" certification
 
+This project requires the MIMIC-IV dataset, which is a **restricted-access resource**.
+
+### Steps to Obtain Access:
+
+1. Complete the CITI "Data or Specimens Only Research" course: https://about.citiprogram.org/
+2. Create a PhysioNet account: https://physionet.org/register/
+3. Request access to MIMIC-IV v3.1: https://physionet.org/content/mimiciv/
+4. Sign the PhysioNet Credentialed Health Data Use Agreement
+5. Once approved, download the dataset and place CSV files in `data/raw/`
+
+**Note:** Approval typically takes a few business days after submitting your request.
+
+## Installation
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/yourusername/ClinicalDigitalTwin.git
+cd ClinicalDigitalTwin
+```
+
+### 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Running the Preprocessing Pipeline
+### 3. Verify Data Placement
 
+Ensure MIMIC-IV CSV files are in the `data/raw/` directory before running preprocessing.
+
+## Usage
+
+### Running the Preprocessing Pipeline
 ```bash
 python run.py
 ```
 
-This will execute both static and temporal preprocessing according to their respective configuration files in `configs/`.
+This executes both static and temporal preprocessing according to the configuration files in `configs/`:
 
-- Static preprocessing: Processes demographic, comorbidity, and baseline features.
+- **Static preprocessing:** Processes demographic, comorbidity, and baseline features
+- **Temporal preprocessing:** Processes time-series events such as ICU stays, vitals, labs, medications, and procedures (**Note:** Still in progress)
 
-- Temporal preprocessing: Processes time-series events such as ICU stays, vitals, labs, medications, and procedures.
 
 ### 3. Notebooks
 
@@ -48,4 +80,14 @@ Use the notebooks in `notebooks/` to test and explore preprocessing functions be
 
 ## License
 
-This project is for research purposes using MIMIC-IV data. Please ensure compliance with MIMIC-IV data use agreements.
+This project is intended for **research use only** with MIMIC-IV data. By using this repository, you agree to comply with:
+
+- The MIMIC-IV Data Use Agreement: [PhysioNet Credentialing](https://physionet.org/content/mimiciv/view-dua/3.1/)
+- Any institutional or IRB requirements for working with de-identified patient data.
+
+**Full License:** [PhysioNet Data License](https://physionet.org/content/mimiciv/view-license/3.1/)
+Redistribution and commercial use are prohibited.
+
+## Acknowledgments
+
+This project was built using the MIMIC-IV dataset provided by the MIT Laboratory for Computational Physiology.

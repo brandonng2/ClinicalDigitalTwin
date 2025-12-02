@@ -1,36 +1,46 @@
-# run.py
 import json
-import os
-from src.preprocessing.static_preprocessing import process_static_data
-from src.preprocessing.temporal_preprocessing import process_temporal_data
+import sys
+from pathlib import Path
+from src.preprocessing.static_preprocessing import run_static_preprocessing
+
 
 def load_config(config_path):
     """Load a JSON configuration file."""
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Config file not found: {config_path}")
     with open(config_path, "r") as f:
         return json.load(f)
 
 def main():
-    print("=== Starting Preprocessing Pipeline ===\n")
+    # Check for skip flags
+    skip_static = "--skip-static" in sys.argv
+
+    print("=" * 60)
+    print("MIMIC-IV PREPROCESSING PIPELINE")
+    print("=" * 60)
+    print()
+    
     
     # --- Static Preprocessing ---
-    static_config_path = "configs/static_preprocessing.json"
-    static_config = load_config(static_config_path)
-    
-    print("Running static preprocessing...")
-    process_static_data(static_config)
-    print("Static preprocessing complete!\n")
+    if not skip_static:
+        static_config = load_config("configs/static_preprocessing_params.json")
+        
+        in_dir = Path(static_config["paths"]["in_dir"])
+        out_path = Path(static_config["paths"]["out_dir"])
+        
+        run_static_preprocessing(in_dir, "configs/static_preprocessing_params.json", out_path)
+    else:
+        print("Skipping static preprocessing")
     
     # --- Temporal Preprocessing ---
-    temporal_config_path = "configs/temporal_preprocessing.json"
-    temporal_config = load_config(temporal_config_path)
+    # TODO: Temporal Preprocessing (not yet implemented)
+    # if not skip_temporal:
+    #     print("\nRunning temporal preprocessing...")
+    #     temporal_config = load_config("configs/temporal_preprocessing.json")
+    #     run_temporal_preprocessing(...)
     
-    print("Running temporal preprocessing...")
-    process_temporal_data(temporal_config)
-    print("Temporal preprocessing complete!\n")
+    print("\n" + "=" * 60)
+    print("ALL PREPROCSSING COMPLETED!")
+    print("=" * 60)
     
-    print("=== All Preprocessing Done! ===")
 
 if __name__ == "__main__":
     main()

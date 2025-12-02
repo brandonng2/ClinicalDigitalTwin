@@ -1,7 +1,7 @@
 {
     "paths": {
         "in_dir": "data/raw/static",
-        "out_dir": "data/processed/static"
+        "out_dir": "data/processed/static/static_features.csv"
     },
     "static_sources": {
         "patients": "hosp_patient.csv",
