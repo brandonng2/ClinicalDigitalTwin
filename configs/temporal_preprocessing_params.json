@@ -11,6 +11,7 @@
         "icu_procedureevents": "icu_procedureevents.csv",
         "icu_ingredientevents": "icu_ingredientevents.csv",
         "icu_datetimeevents": "datetimeevents.csv",
+        "hosp_procedures": "hosp_procedures_icd.csv",
         "hosp_labevents": "hosp_labevents.csv",
         "hosp_microbiologyevents": "hosp_microbiologyevents.csv",
         "hosp_emar": "hosp_emar.csv",

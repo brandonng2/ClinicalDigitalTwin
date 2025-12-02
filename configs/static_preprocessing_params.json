@@ -4,13 +4,13 @@
         "out_dir": "data/processed/static"
     },
     "static_sources": {
-        "patients": "hosp_patients.csv",
+        "patients": "hosp_patient.csv",
         "admissions": "hosp_admissions.csv",
         "hosp_diagnosis": "hosp_diagnosis_icd.csv",
-        "hosp_procedures": "procedures_icd.csv",
         "drgcodes": "drgcodes.csv",
+        "icustays": "icustays.csv",
         "edstays": "edstays.csv",
         "ed_diagnosis": "ed_diagnosis.csv",
-        "ecg_records": "record_list.csv"
+        "record_list": "record_list.csv"
     }
 }
