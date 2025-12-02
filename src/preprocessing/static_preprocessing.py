@@ -75,19 +75,22 @@ def clean_diagnosis_data(df, prefix):
     # Group by first 2 columns (typically subject_id and hadm_id/stay_id)
     group_cols = df.columns[:2].tolist()
     
+    title_col = 'long_title' if 'long_title' in df.columns else 'icd_title'
+    
     df_diag_agg = (
         df
         .groupby(group_cols, as_index=False)
         .agg({
             "icd_code": list,
-            "long_title": list
+            title_col: list
         })
         .rename(columns={
             "icd_code": f"{prefix}_icd_codes_diagnosis",
-            "long_title": f"{prefix}_diagnosis"
+            title_col: f"{prefix}_diagnosis"
         })
     )
     return df_diag_agg
+
 
 
 def preprocess_admissions(df):
