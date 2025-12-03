@@ -5,7 +5,7 @@
     },
     "static_sources": {
         "admissions": "admissions.csv",
-        "patients": "patient.csv",
+        "patients": "patients.csv",
         "hosp_diagnosis": "diagnoses_icd.csv",
         "drgcodes": "drgcodes.csv",
         "icustays": "icustays.csv",

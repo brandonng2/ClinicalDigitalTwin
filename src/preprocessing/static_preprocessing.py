@@ -108,14 +108,11 @@ def clean_diagnosis_data(df, prefix):
 
     # Determine sorting and grouping columns
     if prefix == "ed":
-        # Include stay_id in grouping for ED
-        sort_cols = ["subject_id", "stay_id"] + [c for c in df.columns if c not in ["subject_id", "stay_id"]]
         group_cols = ["subject_id", "stay_id"]
     else:
-        sort_cols = ["subject_id", "hadm_id"] + [c for c in df.columns if c not in ["subject_id", "hadm_id"]]
         group_cols = ["subject_id", "hadm_id"]
 
-    df = df.sort_values(sort_cols)
+    df = df.sort_values(group_cols + ['seq_num'])
 
     # Determine diagnosis title column
     title_col = 'long_title' if 'long_title' in df.columns else 'icd_title'
@@ -130,100 +127,78 @@ def clean_diagnosis_data(df, prefix):
         .rename(columns={
             "icd_code": f"{prefix}_icd_codes_diagnosis",
             title_col: f"{prefix}_diagnosis",
-            "stay_id": f"{prefix}_stay_id" if prefix == "ed" and "stay_id" in df.columns else "stay_id"
+            "stay_id": f"{prefix}_stay_id"
         })
     )
-
     return df_diag_agg
-
 
 
 def preprocess_icustays(df):
     """Aggregate ICU stays per admission into lists and add stay count."""
     df = clean_cols_types(df)
     
-    temporal_cols = [col for col in ['stay_id', 'first_careunit', 'last_careunit', 'los'] 
-                     if col in df.columns]
+    temporal_cols = ['stay_id', 'first_careunit', 'last_careunit', 'los']
     
     df = df.groupby(['subject_id', 'hadm_id'], sort=False).agg({
         col: list for col in temporal_cols
     }).reset_index()
     
-    if 'stay_id' in df.columns:
-        df['count'] = df['stay_id'].str.len()
+    df['count'] = df['stay_id'].str.len()
     
     return add_prefix_to_columns(df, 'icu')
 
 
 def merge_ecg(hosp_master_df, record_list_df):
-    """
-    Merge ECG records with hospital stays, assigning each ECG to the smallest matching time window.
-    Ensures no duplicate ECGs across rows.
-    
-    Args:
-        hosp_master_df: DataFrame with hospital admissions/ED stays
-        record_list_df: DataFrame with ECG records (must have ecg_time and study_id)
-    
-    Returns:
-        DataFrame with 'ecg_study_ids' column added
-    """
-    # Convert columns to datetime
-    record_list_df_cleaned = record_list_df.copy()
-    record_list_df_cleaned['ecg_time'] = pd.to_datetime(record_list_df_cleaned['ecg_time'])
+    df = hosp_master_df.reset_index(drop=True).copy()
+    df["_row_idx"] = df.index
 
-    hosp_master_df[['hosp_admittime','hosp_dischtime','ed_intime','ed_outtime']] = \
-    hosp_master_df[['hosp_admittime','hosp_dischtime','ed_intime','ed_outtime']].apply(pd.to_datetime)
+    ecg = record_list_df.copy()
+    ecg["ecg_time"] = pd.to_datetime(ecg["ecg_time"])
 
-    hosp_master_df = hosp_master_df.reset_index(drop=True)
-    hosp_master_df['_row_idx'] = hosp_master_df.index
+    # make sure time columns are datetime
+    time_cols = ["hosp_admittime","hosp_dischtime","ed_intime","ed_outtime"]
+    df[time_cols] = df[time_cols].apply(pd.to_datetime)
 
-    merged = hosp_master_df.merge(record_list_df_cleaned, on='subject_id', how='left')
-    merged = merged[merged['ecg_time'].notna()].copy()
+    merged = df.merge(ecg, on="subject_id", how="left")
+    merged = merged[merged["ecg_time"].notna()].copy()
 
     hosp_mask = (
-        merged['hosp_admittime'].notna() & 
-        merged['hosp_dischtime'].notna() &
-        (merged['ecg_time'] >= merged['hosp_admittime']) & 
-        (merged['ecg_time'] <= merged['hosp_dischtime'])
+        merged["hosp_admittime"].notna() &
+        merged["hosp_dischtime"].notna() &
+        merged["ecg_time"].between(merged["hosp_admittime"], merged["hosp_dischtime"])
     )
 
     ed_mask = (
-        merged['ed_intime'].notna() & 
-        merged['ed_outtime'].notna() &
-        (merged['ecg_time'] >= merged['ed_intime']) & 
-        (merged['ecg_time'] <= merged['ed_outtime'])
+        merged["ed_intime"].notna() &
+        merged["ed_outtime"].notna() &
+        merged["ecg_time"].between(merged["ed_intime"], merged["ed_outtime"])
     )
 
-    merged_filtered = merged[hosp_mask | ed_mask].copy()
+    merged = merged[hosp_mask | ed_mask].copy()
 
-    hosp_window = merged_filtered['hosp_dischtime'] - merged_filtered['hosp_admittime']
-    ed_window = merged_filtered['ed_outtime'] - merged_filtered['ed_intime']
-    
-    # Prefer smaller window to assign ECGs to most specific stay
-    merged_filtered['window_size'] = hosp_window.combine(
-        ed_window, 
+    hosp_win = merged["hosp_dischtime"] - merged["hosp_admittime"]
+    ed_win = merged["ed_outtime"] - merged["ed_intime"]
+
+    merged["window_size"] = hosp_win.combine(
+        ed_win,
         lambda h, e: h if pd.notna(h) and (pd.isna(e) or h <= e) else e
     )
 
-    merged_filtered = merged_filtered.sort_values(['study_id', 'window_size'])
-    
-    # Each ECG assigned to only one stay (smallest matching window)
-    merged_filtered = merged_filtered.drop_duplicates(subset='study_id', keep='first')
-
-    result = (
-        merged_filtered
-        .groupby('_row_idx', as_index=False)
-        .agg({'study_id': list})
-        .rename(columns={'study_id': 'ecg_study_ids'})
+    merged = (
+    merged.sort_values(["study_id", "window_size"])
+          .drop_duplicates("study_id")
     )
 
-    hosp_master_df = hosp_master_df.merge(result, on='_row_idx', how='left')
-    hosp_master_df['ecg_study_ids'] = hosp_master_df['ecg_study_ids'].apply(
-        lambda x: x if isinstance(x, list) else []
+    grouped = (
+        merged.groupby("_row_idx", as_index=False)
+            .agg(ecg_study_ids=("study_id", list))
     )
-    hosp_master_df = hosp_master_df.drop(columns=['_row_idx'])
-    
-    return hosp_master_df
+
+    df = df.merge(grouped, on="_row_idx", how="left")
+    df["ecg_study_ids"] = df["ecg_study_ids"].apply(lambda x: x if isinstance(x, list) else [])
+
+    return df.drop(columns="_row_idx")
+
 
 
 def merge_hosp(admissions_df, patients_df, diagnosis_df, drgcodes_df, icustays_df, edstays_df, ed_diagnosis_df):
