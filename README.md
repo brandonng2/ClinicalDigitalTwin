@@ -31,6 +31,7 @@ The pipeline supports both static (column-based) and temporal (row-based) prepro
 ├── src/
 │   └── preprocessing/
 │       ├── static_preprocessing.py    # Functions to preprocess static/column-based data
+        ├── clinical_entity_extraction.py    # Functions to extracted cardiovascular clinical entities from diagnostic data
 │       └── temporal_preprocessing.py  # Functions to preprocess temporal/row-based data
 ├── run.py                             # Main script to execute the preprocessing pipeline
 ├── requirements.txt                   # Python dependencies
@@ -152,7 +153,7 @@ WHERE eds.subject_id IN (
 
 #### 8. Hospital Drgcode
 ```sql
--- Save as: edstays.csv
+-- Save as: drgcodes.csv
 SELECT *
 FROM `physionet-data.mimiciv_3_1_hosp.drgcodes` AS dc
 WHERE dc.subject_id IN (
@@ -211,9 +212,10 @@ Ensure all required CSV files are in `data/raw/static` before running preprocess
 python run.py
 ```
 
-This executes both static and temporal preprocessing according to configuration files in `configs/`:
+This executes both static preprocessing, clinical entity extraction, and temporal preprocessing according to configuration files in `configs/`:
 
 - **Static preprocessing:** Demographic, comorbidity, and baseline features from admissions and patient data
+- **Clinical Entity Extraction:** Extracting cardiovascular clinical keywords from diagnoses' data (**In Progress**)
 - **Temporal preprocessing:** Time-series events including ICU vitals, ED visits, procedures, and ECG measurements (**In Progress**)
 
 ### Exploratory Analysis

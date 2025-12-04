@@ -1,7 +1,9 @@
 import json
 import sys
 from pathlib import Path
+import pandas as pd
 from src.preprocessing.static_preprocessing import run_static_preprocessing
+from src.preprocessing.clinical_entity_extraction import run_entity_extraction
 
 
 def load_config(config_path):
@@ -29,6 +31,23 @@ def main():
         run_static_preprocessing(in_dir, "configs/static_preprocessing_params.json", out_path)
     else:
         print("Skipping static preprocessing")
+
+    # --- Clinical Entity Extraction (Simply for Now, Better Complexity In Progress) ---
+    # Only run if static preprocessing was not skipped
+    if not skip_static:
+        # Use the same in_dir/out_path pattern as static preprocessing
+        static_master_path = out_path  # output from static preprocessing
+        entity_out_path = out_path.parent / "static_master_with_entities.csv"
+    
+        # Load the static master dataset
+        static_master = pd.read_csv(static_master_path)
+    
+        # Run clinical entity extraction
+        static_master = run_entity_extraction(static_master, entity_out_path)
+    
+        print(f"Clinical entity extraction completed. Saved to {entity_out_path}")
+    else:
+        print("Skipping clinical entity extraction since static preprocessing was skipped")
     
     # --- Temporal Preprocessing ---
     # TODO: Temporal Preprocessing (not yet implemented)
