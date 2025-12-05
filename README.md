@@ -48,11 +48,22 @@ The pipeline supports both static (column-based) and temporal (row-based) prepro
 
 ## Data Access
 
-This project requires access to **multiple MIMIC-IV datasets**, all of which are restricted-access resources:
+This project requires access to **multiple MIMIC-IV datasets**.
 
-1. **MIMIC-IV v3.1** (Core hospital data): https://physionet.org/content/mimiciv/3.1/
-2. **MIMIC-IV-ECG v1.0** (ECG recordings): https://physionet.org/content/mimic-iv-ecg/1.0/
-3. **MIMIC-IV-ED v2.2** (Emergency department data): https://physionet.org/content/mimic-iv-ed/2.2/
+### 🔓 Unrestricted Dataset (No Credentialing Required)
+
+- **MIMIC-IV-ECG v1.0** (ECG recordings): https://physionet.org/content/mimic-iv-ecg/1.0/  
+  Download `machine_measurements.csv` and `record_list.csv` (rename this to `ecg_record_list.csv`).
+
+---
+
+### 🔒 Restricted-Access Datasets
+
+These require completing PhysioNet credentialing (CITI + user agreement):
+
+- **MIMIC-IV v3.1** (Core hospital data): https://physionet.org/content/mimiciv/3.1/
+- **MIMIC-IV-ED v2.2** (Emergency department data): https://physionet.org/content/mimic-iv-ed/2.2/
+
 
 ### Steps to Obtain Access:
 
@@ -184,7 +195,7 @@ Alternatively, download complete datasets and filter locally:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/ClinicalDigitalTwin.git
+git clone https://github.com/brandonng2/ClinicalDigitalTwin.git
 cd ClinicalDigitalTwin
 ```
 
@@ -203,6 +214,7 @@ Ensure all required CSV files are in `data/raw/static` before running preprocess
 - `ed_diagnosis.csv`
 - `edstays.csv`
 - `icustays.csv`
+- `machine_measurements.csv`
 - `patients.csv`
 
 ## Usage
