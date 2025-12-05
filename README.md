@@ -177,7 +177,7 @@ WHERE dc.subject_id IN (
 
 After running these queries:
 1. Export each result as CSV from BigQuery
-2. Place all CSV files in the `data/raw/` directory
+2. Place all CSV files in the `data/raw/static` directory
 3. Ensure filenames match those specified in the SQL comments
 
 **Cohort Size:** All queries filter for patients with ECG records, resulting in a subset of the full MIMIC-IV population.
@@ -186,7 +186,7 @@ After running these queries:
 
 Alternatively, download complete datasets and filter locally:
 1. Download each dataset from PhysioNet (links above)
-2. Extract relevant CSV files to `data/raw/`
+2. Extract relevant CSV files to `data/raw/static`
 3. The preprocessing pipeline will automatically filter for ECG patients
 
 **Note:** BigQuery is more efficient for large-scale filtering.
